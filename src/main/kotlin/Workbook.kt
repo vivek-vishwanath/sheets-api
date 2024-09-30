@@ -15,4 +15,12 @@ class Workbook(val spreadsheetID: String) {
             .execute()
         return response.getValues()?.map { it.map { that -> that.toString() } } ?: emptyList()
     }
+
+    fun writeSheetData(address: String, values: List<List<Any>>) {
+        val body = ValueRange().setValues(values)
+        service.spreadsheets().values()
+            .update(spreadsheetID, address, body)
+            .setValueInputOption("RAW")
+            .execute()
+    }
 }
