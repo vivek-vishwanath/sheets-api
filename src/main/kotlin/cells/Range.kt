@@ -16,7 +16,9 @@ class Range(col: Int, row: Int, val width: Int, val height: Int): Cell(col, row)
             if (parts.size > 2) throw InvalidAddressException("Range address has too many delimiters `:`")
             val topLeft = Cell(parts[0])
             val bottomRight = Cell(parts[1])
-            return Range(topLeft.col, topLeft.row, bottomRight.col - topLeft.col + 1, bottomRight.row - topLeft.row + 1)
+            return Range(topLeft.col, topLeft.row, bottomRight.col - topLeft.col, bottomRight.row - topLeft.row)
         }
     }
+
+    override fun toString() = "${super.toString()}:${Cell(col + width, row + height)}"
 }

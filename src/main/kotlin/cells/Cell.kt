@@ -15,12 +15,23 @@ open class Cell(val col: Int, val row: Int) {
             var col = 0
             while (address[i] in 'A'..'Z') {
                 col *= 26
-                col += address[i++] - 'A'
+                col += address[i++] - 'A' + 1
                 if (i >= address.length) throw InvalidAddressException()
             }
             val row = address.substring(i).toIntOrNull()
                 ?: throw InvalidAddressException("Missing or Invalid Row #")
-            return Cell(col, row - 1)
+            return Cell(col, row)
         }
+    }
+
+    override fun toString(): String {
+        var col = col
+        var out = "$row"
+        while (col > 0) {
+            col--
+            out = "${'A' + col % 26}$out"
+            col /= 26
+        }
+        return out
     }
 }
