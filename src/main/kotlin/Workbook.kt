@@ -9,9 +9,9 @@ class Workbook(val spreadsheetID: String) {
 
     var sheet = sheets[0]
 
-    fun readCell(col: Int, row: Int): List<List<String>> {
+    fun readRange(address: String): List<List<String>> {
         val response: ValueRange = service.spreadsheets().values()
-            .get(spreadsheetID, "${(col + 65).toChar()}${row + 1}")
+            .get(spreadsheetID, address)
             .execute()
         return response.getValues()?.map { it.map { that -> that.toString() } } ?: emptyList()
     }
