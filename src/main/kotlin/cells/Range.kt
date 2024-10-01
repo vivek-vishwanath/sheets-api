@@ -1,6 +1,7 @@
 package org.example.cells
 
 import cells.Cell
+import com.google.api.services.sheets.v4.model.GridRange
 
 class Range(col: Int, row: Int, val width: Int, val height: Int): Cell(col, row) {
 
@@ -18,6 +19,14 @@ class Range(col: Int, row: Int, val width: Int, val height: Int): Cell(col, row)
             val bottomRight = Cell(parts[1])
             return Range(topLeft.col, topLeft.row, bottomRight.col - topLeft.col, bottomRight.row - topLeft.row)
         }
+    }
+    
+    fun gridRange(sheetID: Int) = GridRange().apply {
+        sheetId = sheetID
+        startRowIndex = row - 1
+        endRowIndex = row + height
+        startColumnIndex = col - 1
+        endColumnIndex = col + width
     }
 
     override fun toString() = "${super.toString()}:${Cell(col + width, row + height)}"

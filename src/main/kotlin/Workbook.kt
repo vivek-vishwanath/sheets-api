@@ -3,6 +3,7 @@ package org.example
 import com.google.api.services.sheets.v4.model.*
 import org.example.OAuth.service
 import org.example.cells.Format
+import org.example.cells.MismatchedDimensionsException
 import org.example.cells.Range
 
 class Workbook(val spreadsheetID: String) {
@@ -20,12 +21,22 @@ class Workbook(val spreadsheetID: String) {
         return response.getValues()?.map { it.map { that -> that.toString() } } ?: emptyList()
     }
 
-    fun writeSheetData(address: String, values: List<List<Any>>) {
-        val body = ValueRange().setValues(values)
-        service.spreadsheets().values()
-            .update(spreadsheetID, address, body)
-            .setValueInputOption("RAW")
-            .execute()
+    fun writeSheetData(address: String, values: Array<Array<String>>) {
+        val targetRange = Range(address)
+        if (values.size > targetRange.height + 1)
+            throw MismatchedDimensionsException()
+        requests.add(
+            Request().setUpdateCells(UpdateCellsRequest().apply {
+                range = targetRange.gridRange(sheet.properties.sheetId)
+                rows = values.map {
+                    if (it.size > targetRange.width + 1)
+                        throw MismatchedDimensionsException()
+                    RowData().setValues(it.map {
+                        that -> CellData().setUserEnteredValue(ExtendedValue().setStringValue(that))
+                    }) }.toMutableList()
+                fields = "userEnteredValue"
+            })
+        )
     }
 
     fun setFormat(address: String, format: Format) {
