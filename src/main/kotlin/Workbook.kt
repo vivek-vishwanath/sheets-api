@@ -66,6 +66,33 @@ class Workbook(val spreadsheetID: String) {
         )
     }
 
+    fun add(startRowIndex: Int, numberOfRows: Int, rows: Boolean) {
+        requests.add(Request().apply {
+            insertDimension = InsertDimensionRequest().apply {
+                range = DimensionRange().apply {
+                    sheetId = this@Workbook.sheet.properties.sheetId
+                    dimension = if (rows) "ROWS" else "COLUMNS"
+                    startIndex = startRowIndex
+                    endIndex = startRowIndex + numberOfRows
+                }
+                inheritFromBefore = false
+            }
+        })
+    }
+
+    fun delete(intRange: IntRange, rows: Boolean) {
+        requests.add(Request().apply {
+            deleteDimension = DeleteDimensionRequest().apply {
+                range = DimensionRange().apply {
+                    sheetId = this@Workbook.sheet.properties.sheetId
+                    dimension = if (rows) "ROWS" else "COLUMNS"
+                    startIndex = intRange.first - 1
+                    endIndex = intRange.last
+                }
+            }
+        })
+    }
+
     fun flush() {
         val batchUpdateRequest = BatchUpdateSpreadsheetRequest().setRequests(requests)
         service.spreadsheets().batchUpdate(spreadsheetID, batchUpdateRequest).execute()
