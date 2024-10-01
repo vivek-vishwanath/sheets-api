@@ -167,6 +167,19 @@ class Workbook(val spreadsheetID: String) {
         })
     }
 
+    fun protectRange(address: String, editors: Array<String>) {
+        requests.add(Request().apply {
+            addProtectedRange = AddProtectedRangeRequest().apply {
+                protectedRange = ProtectedRange().apply {
+                    this.range = Range(address).gridRange(sheet.properties.sheetId)
+                    this.description = "Protected range example"
+                    this.editors = Editors().setUsers(editors.toList())
+                    this.warningOnly = false
+                }
+            }
+        })
+    }
+
     fun flush() {
         val batchUpdateRequest = BatchUpdateSpreadsheetRequest().setRequests(requests)
         service.spreadsheets().batchUpdate(spreadsheetID, batchUpdateRequest).execute()
