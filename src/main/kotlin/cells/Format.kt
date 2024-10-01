@@ -1,9 +1,6 @@
 package org.example.cells
 
-import com.google.api.services.sheets.v4.model.CellFormat
-import com.google.api.services.sheets.v4.model.Color
-import com.google.api.services.sheets.v4.model.NumberFormat
-import com.google.api.services.sheets.v4.model.TextFormat
+import com.google.api.services.sheets.v4.model.*
 
 data class Format(
     val bold: Boolean = false,
@@ -21,12 +18,12 @@ data class Format(
     val borders: Edges = Edges()
 ) {
 
-    data class Color(val r: UByte, val g: UByte, val b: UByte) {
+    data class Color(val r: UByte = 0u, val g: UByte = 0u, val b: UByte = 0u) {
 
         companion object {
-            val BLACK = Color(0u, 0u, 0u)
+            val BLACK = Color()
         }
-        fun convert() = Color().apply {
+        fun convert() = com.google.api.services.sheets.v4.model.Color().apply {
             red = r.toFloat() / 256
             green = g.toFloat() / 256
             blue = b.toFloat() / 256
@@ -34,7 +31,7 @@ data class Format(
     }
 
     enum class HorizontalAlignment {
-        LEFT, CENTER, RIGHT, JUSTIFIED, START, END
+        LEFT, CENTER, RIGHT, JUSTIFIED
     }
 
     enum class VerticalAlignment {
@@ -45,9 +42,23 @@ data class Format(
         OVERFLOW_CELL, LEGACY_WRAP, CLIP, WRAP
     }
 
-    class Edges(val top: Edge = Edge(), val right: Edge = Edge(), val bottom: Edge = Edge(), val left: Edge = Edge())
+    class Edges(val top: Edge = Edge(), val right: Edge = Edge(), val bottom: Edge = Edge(), val left: Edge = Edge()) {
+        fun convert() = Borders().apply {
+            top = this@Edges.top.convert()
+            right = this@Edges.right.convert()
+            bottom = this@Edges.bottom.convert()
+            left = this@Edges.left.convert()
+        }
+    }
 
-    class Edge(val color: Color = Color.BLACK, val style: EdgeStyle = EdgeStyle.NONE, val width: Int = 1)
+    class Edge(val color: Color = Color.BLACK, val style: EdgeStyle = EdgeStyle.NONE) {
+
+        fun convert() = Border().apply {
+            color = this@Edge.color.convert()
+            style = this@Edge.style.toString()
+            width = 4
+        }
+    }
 
     enum class EdgeStyle {
         NONE, SOLID, DOTTED, DASHED, DOUBLE, GROOVE, RIDGE, INSET, OUTSET,
@@ -57,12 +68,15 @@ data class Format(
         backgroundColor = this@Format.background.convert()
         verticalAlignment = this@Format.verticalAlignment.toString()
         horizontalAlignment = this@Format.horizontalAlignment.toString()
+        wrapStrategy = this@Format.wrapStrategy.toString()
         textFormat = TextFormat().apply {
             fontSize = this@Format.fontSize
             fontFamily = this@Format.fontFamily
             bold = this@Format.bold
             italic = this@Format.italic
             underline = this@Format.underline
+            strikethrough = this@Format.strikethrough
         }
+        borders = this@Format.borders.convert()
     }
 }
