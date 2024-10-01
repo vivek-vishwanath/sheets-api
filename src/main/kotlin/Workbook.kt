@@ -50,12 +50,16 @@ class Workbook(val spreadsheetID: String) {
         val targetRange = Range(address)
         if (values.size > targetRange.height + 1)
             throw MismatchedDimensionsException()
+        else if (values.size <= targetRange.height)
+            println("WARNING: Mismatched Dimensions between ${values.size} rows from address and ${targetRange.height} rows of data")
         requests.add(
             Request().setUpdateCells(UpdateCellsRequest().apply {
                 range = targetRange.gridRange(sheet.properties.sheetId)
                 rows = values.map {
                     if (it.size > targetRange.width + 1)
                         throw MismatchedDimensionsException()
+                    else if (it.size <= targetRange.width)
+                        println("WARNING: Mismatched Dimensions between ${it.size} columns from address and ${targetRange.width} columns of data")
                     RowData().setValues(it.map { that ->
                         CellData().setUserEnteredValue(ExtendedValue().apply {
                             if (that.startsWith("=")) formulaValue = that
