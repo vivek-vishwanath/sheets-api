@@ -31,9 +31,13 @@ class Workbook(val spreadsheetID: String) {
                 rows = values.map {
                     if (it.size > targetRange.width + 1)
                         throw MismatchedDimensionsException()
-                    RowData().setValues(it.map {
-                        that -> CellData().setUserEnteredValue(ExtendedValue().setStringValue(that))
-                    }) }.toMutableList()
+                    RowData().setValues(it.map { that ->
+                        CellData().setUserEnteredValue(ExtendedValue().apply {
+                            if (that.startsWith("=")) formulaValue = that
+                            else stringValue = that
+                        })
+                    })
+                }.toMutableList()
                 fields = "userEnteredValue"
             })
         )
@@ -45,9 +49,10 @@ class Workbook(val spreadsheetID: String) {
             Request().apply {
                 updateCells = UpdateCellsRequest().apply {
                     rows = Array(targetRange.height + 1) {
-                        RowData().setValues(Array(targetRange.width + 1){
+                        RowData().setValues(Array(targetRange.width + 1) {
                             CellData().setUserEnteredFormat(format.convert())
-                        }.toList()) }.toList()
+                        }.toList())
+                    }.toList()
                     range = GridRange().apply {
                         sheetId = sheet.properties.sheetId
                         startRowIndex = targetRange.row - 1
