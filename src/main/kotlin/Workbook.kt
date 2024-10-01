@@ -5,14 +5,39 @@ import org.example.OAuth.service
 import org.example.cells.Format
 import org.example.cells.MismatchedDimensionsException
 import org.example.cells.Range
+import java.lang.IllegalArgumentException
 
 class Workbook(val spreadsheetID: String) {
 
-    val sheets by lazy { service.spreadsheets().get(spreadsheetID).execute().sheets }
+    private fun fetch() = service.spreadsheets().get(spreadsheetID).execute().sheets
+
+    val sheets by lazy { fetch() }
 
     var sheet = sheets[0]
 
     val requests = mutableListOf<Request>()
+
+    fun createNewSheet(newSheetName: String) {
+        requests.add(Request().apply {
+            addSheet = AddSheetRequest().apply {
+                properties = SheetProperties().apply {
+                    title = newSheetName
+                }
+            }
+        })
+        flush()
+        swapSheet(newSheetName)
+    }
+
+    fun swapSheet(name: String) {
+        sheets.forEach {
+            if (it.properties.title == name) {
+                sheet = it
+                return
+            }
+        }
+        throw IllegalArgumentException("Invalid sheet name: \"$name\"")
+    }
 
     fun readRange(address: String): List<List<String>> {
         val response: ValueRange = service.spreadsheets().values()
@@ -97,5 +122,7 @@ class Workbook(val spreadsheetID: String) {
         val batchUpdateRequest = BatchUpdateSpreadsheetRequest().setRequests(requests)
         service.spreadsheets().batchUpdate(spreadsheetID, batchUpdateRequest).execute()
         requests.clear()
+        sheets.clear()
+        sheets.addAll(fetch())
     }
 }
