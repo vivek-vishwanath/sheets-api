@@ -15,7 +15,7 @@ data class Format(
     val verticalAlignment: VerticalAlignment = VerticalAlignment.MIDDLE,
     val numberFormat: NumberFormat = Automatic,
     val wrapStrategy: WrapStrategy = WrapStrategy.WRAP,
-    val textRotation: TextRotation = TextRotation(),
+    val textRotation: TextRotation = AngledText(0),
     val borders: Edges = Edges(),
     val padding: Padding = Padding(),
     val hyperlink: Boolean = false
@@ -45,9 +45,9 @@ data class Format(
         OVERFLOW_CELL, LEGACY_WRAP, CLIP, WRAP
     }
 
-    data class TextRotation(val vertical: Boolean = false, val angle: Int = 0) {
-        fun convert() = com.google.api.services.sheets.v4.model.TextRotation().setAngle(angle).setVertical(vertical)
-    }
+    sealed interface TextRotation
+    class AngledText(val angle: Int = 0): TextRotation
+    data object VerticalText: TextRotation
 
     data class Padding(val top: Int = 0, val right: Int = 0, val bottom: Int = 0, val left: Int = 0) {
         fun convert() = com.google.api.services.sheets.v4.model.Padding().apply {
@@ -106,7 +106,12 @@ data class Format(
                 Automatic -> {}
             }
         }
-        textRotation = this@Format.textRotation.convert()
+        textRotation = TextRotation().apply {
+            when (val tr = this@Format.textRotation) {
+                is AngledText -> angle = tr.angle
+                is VerticalText -> vertical = true
+            }
+        }
         hyperlinkDisplayType = if (hyperlink) "LINKED" else "PLAIN_TEXT"
         padding = this@Format.padding.convert()
     }

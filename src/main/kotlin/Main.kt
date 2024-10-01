@@ -7,5 +7,6 @@ fun main() {
     spreadsheet.swapSheet("NewSheet3")
     spreadsheet.setFormat("H10", Format(numberFormat = Format.PredefinedFormat.CURRENCY))
     spreadsheet.setFormat("H12", Format(numberFormat = Format.PredefinedFormat.PERCENT))
+    spreadsheet.setFormat("H11", Format(textRotation = Format.VerticalText))
     spreadsheet.flush()
 }

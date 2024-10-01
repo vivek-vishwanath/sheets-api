@@ -181,6 +181,7 @@ class Workbook(val spreadsheetID: String) {
     }
 
     fun flush() {
+        if (requests.size == 0) return
         val batchUpdateRequest = BatchUpdateSpreadsheetRequest().setRequests(requests)
         service.spreadsheets().batchUpdate(spreadsheetID, batchUpdateRequest).execute()
         requests.clear()
