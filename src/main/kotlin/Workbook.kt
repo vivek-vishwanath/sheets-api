@@ -122,6 +122,51 @@ class Workbook(val spreadsheetID: String) {
         })
     }
 
+    fun addCheckbox(address: String) {
+        requests.add(Request().apply {
+            setDataValidation = SetDataValidationRequest().apply {
+                range = Range(address).gridRange(sheet.properties.sheetId)
+                rule = DataValidationRule().apply {
+                    condition = BooleanCondition().apply {
+                        type = "BOOLEAN"
+                    }
+                    strict = false
+                    showCustomUi = true
+                }
+            }
+        })
+    }
+
+    fun mergeCells(address: String) {
+        requests.add(Request().apply {
+            mergeCells = MergeCellsRequest().apply {
+                range = Range(address).gridRange(sheet.properties.sheetId)
+                mergeType = "MERGE_ALL"
+            }
+        })
+    }
+
+    fun resize(intRange: IntRange, rows: Boolean, newWidth: Int? = null) {
+        val dimensionRange = DimensionRange().apply {
+            sheetId = sheet.properties.sheetId
+            dimension = if (rows) "ROWS" else "COLUMNS"
+            startIndex = intRange.first - 1
+            endIndex = intRange.last
+        }
+        requests.add(Request().apply {
+            if (newWidth == null)
+                autoResizeDimensions = AutoResizeDimensionsRequest().setDimensions(dimensionRange)
+            else
+                updateDimensionProperties = UpdateDimensionPropertiesRequest().apply {
+                    range = dimensionRange
+                    properties = DimensionProperties().apply {
+                        pixelSize = newWidth
+                    }
+                    fields = "pixelSize"
+                }
+        })
+    }
+
     fun flush() {
         val batchUpdateRequest = BatchUpdateSpreadsheetRequest().setRequests(requests)
         service.spreadsheets().batchUpdate(spreadsheetID, batchUpdateRequest).execute()
