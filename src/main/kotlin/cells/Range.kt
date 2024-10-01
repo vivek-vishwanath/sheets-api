@@ -13,10 +13,9 @@ class Range(col: Int, row: Int, val width: Int, val height: Int): Cell(col, row)
 
         fun fromString(address: String): Range {
             val parts = address.split(":")
-            if (parts.size == 1) throw InvalidAddressException("Range address is missing delimiter `:`")
             if (parts.size > 2) throw InvalidAddressException("Range address has too many delimiters `:`")
             val topLeft = Cell(parts[0])
-            val bottomRight = Cell(parts[1])
+            val bottomRight = Cell(if (parts.size == 2) parts[1] else parts[0])
             return Range(topLeft.col, topLeft.row, bottomRight.col - topLeft.col, bottomRight.row - topLeft.row)
         }
     }

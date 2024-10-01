@@ -13,9 +13,12 @@ data class Format(
     val background: Color = Color(0xFFu, 0xFFu, 0xFFu),
     val horizontalAlignment: HorizontalAlignment = HorizontalAlignment.CENTER,
     val verticalAlignment: VerticalAlignment = VerticalAlignment.MIDDLE,
-    val numberFormat: NumberFormat = NumberFormat(),
+    val numberFormat: NumberFormat = Automatic,
     val wrapStrategy: WrapStrategy = WrapStrategy.WRAP,
-    val borders: Edges = Edges()
+    val textRotation: TextRotation = TextRotation(),
+    val borders: Edges = Edges(),
+    val padding: Padding = Padding(),
+    val hyperlink: Boolean = false
 ) {
 
     data class Color(val r: UByte = 0u, val g: UByte = 0u, val b: UByte = 0u) {
@@ -41,6 +44,24 @@ data class Format(
     enum class WrapStrategy {
         OVERFLOW_CELL, LEGACY_WRAP, CLIP, WRAP
     }
+
+    data class TextRotation(val vertical: Boolean = false, val angle: Int = 0) {
+        fun convert() = com.google.api.services.sheets.v4.model.TextRotation().setAngle(angle).setVertical(vertical)
+    }
+
+    data class Padding(val top: Int = 0, val right: Int = 0, val bottom: Int = 0, val left: Int = 0) {
+        fun convert() = com.google.api.services.sheets.v4.model.Padding().apply {
+            top = this@Padding.top
+            right = this@Padding.right
+            bottom = this@Padding.bottom
+            left = this@Padding.left
+        }
+    }
+
+    sealed interface NumberFormat
+    enum class PredefinedFormat: NumberFormat { NUMBER, CURRENCY, PERCENT, DATE, TIME, TEXT, SCIENTIFIC }
+    data object Automatic: NumberFormat
+    data class NumberPattern(val pattern: String): NumberFormat
 
     class Edges(val top: Edge = Edge(), val right: Edge = Edge(), val bottom: Edge = Edge(), val left: Edge = Edge()) {
         fun convert() = Borders().apply {
@@ -78,5 +99,15 @@ data class Format(
             strikethrough = this@Format.strikethrough
         }
         borders = this@Format.borders.convert()
+        numberFormat = NumberFormat().apply {
+            when (val nf = this@Format.numberFormat) {
+                is NumberPattern -> pattern = nf.pattern
+                is PredefinedFormat -> type = nf.toString()
+                Automatic -> {}
+            }
+        }
+        textRotation = this@Format.textRotation.convert()
+        hyperlinkDisplayType = if (hyperlink) "LINKED" else "PLAIN_TEXT"
+        padding = this@Format.padding.convert()
     }
 }
