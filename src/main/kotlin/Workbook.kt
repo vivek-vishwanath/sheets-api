@@ -39,11 +39,14 @@ class Workbook(val spreadsheetID: String) {
         throw IllegalArgumentException("Invalid sheet name: \"$name\"")
     }
 
-    fun readRange(address: String): List<List<String>> {
+    fun readRange(address: String): Array<Array<String>> {
+        flush()
         val response: ValueRange = service.spreadsheets().values()
             .get(spreadsheetID, address)
             .execute()
-        return response.getValues()?.map { it.map { that -> that.toString() } } ?: emptyList()
+        return response.getValues()?.map {
+            it.map { that -> that.toString() }.toTypedArray()
+        }?.toTypedArray() ?: emptyArray<Array<String>>()
     }
 
     fun writeSheetData(address: String, values: Array<Array<String>>) {
