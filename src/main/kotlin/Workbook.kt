@@ -60,6 +60,13 @@ class Workbook(val spreadsheetID: String) {
         return this@Workbook[address]
     }
 
+    operator fun set(address: String, value: String) = set(address, arrayOf(arrayOf(value)))
+
+    operator fun set(address: String, values: Array<String>) {
+	if (Range(address).height == 1) set(address, arrayOf(values))
+	else set(address, Array(values.size) { arrayOf(values[it]) })
+    }
+
     operator fun set(address: String, values: Array<Array<String>>) {
         val targetRange = Range(address)
         if (values.size > targetRange.height + 1)
