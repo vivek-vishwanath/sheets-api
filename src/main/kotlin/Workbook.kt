@@ -6,7 +6,6 @@ import org.example.cells.Format
 import org.example.cells.MismatchedDimensionsException
 import org.example.cells.Range
 import java.lang.IllegalArgumentException
-import javax.sound.sampled.Line
 
 class Workbook(val spreadsheetID: String) {
 
@@ -138,7 +137,7 @@ class Workbook(val spreadsheetID: String) {
         })
     }
 
-    operator fun Line.minus(intRange: IntRange) {
+    operator fun Linearity.minus(intRange: IntRange) {
         requests.add(Request().apply {
             deleteDimension = DeleteDimensionRequest().apply {
                 range = DimensionRange().apply {
