@@ -6,16 +6,23 @@ import org.example.cells.Format
 import org.example.cells.MismatchedDimensionsException
 import org.example.cells.Range
 import java.lang.IllegalArgumentException
+import javax.sound.sampled.Line
 
 class Workbook(val spreadsheetID: String) {
 
     private fun fetch() = service.spreadsheets().get(spreadsheetID).execute().sheets
 
-    val sheets by lazy { fetch() }
+    private val sheets by lazy { fetch() }
 
-    var sheet = sheets[0]
+    private var sheet = sheets[0]
 
-    val requests = mutableListOf<Request>()
+    private val requests = mutableListOf<Request>()
+
+    var sheetName: String
+        get() = sheet.properties.title
+        set(value) {
+            swapSheet(value)
+        }
 
     fun createNewSheet(newSheetName: String) {
         requests.add(Request().apply {
@@ -29,7 +36,7 @@ class Workbook(val spreadsheetID: String) {
         swapSheet(newSheetName)
     }
 
-    fun swapSheet(name: String) {
+    private fun swapSheet(name: String) {
         sheets.forEach {
             if (it.properties.title == name) {
                 sheet = it
@@ -39,7 +46,7 @@ class Workbook(val spreadsheetID: String) {
         throw IllegalArgumentException("Invalid sheet name: \"$name\"")
     }
 
-    fun readRange(address: String): Array<Array<String>> {
+    operator fun get(address: String): Array<Array<String>> {
         flush()
         val response: ValueRange = service.spreadsheets().values()
             .get(spreadsheetID, address)
@@ -49,7 +56,12 @@ class Workbook(val spreadsheetID: String) {
         }?.toTypedArray() ?: emptyArray<Array<String>>()
     }
 
-    fun writeSheetData(address: String, values: Array<Array<String>>) {
+    operator fun String.get(address: String): Array<Array<String>> {
+        sheetName = this
+        return this@Workbook[address]
+    }
+
+    operator fun set(address: String, values: Array<Array<String>>) {
         val targetRange = Range(address)
         if (values.size > targetRange.height + 1)
             throw MismatchedDimensionsException()
@@ -75,7 +87,12 @@ class Workbook(val spreadsheetID: String) {
         )
     }
 
-    fun setFormat(address: String, format: Format) {
+    operator fun String.set(address: String, values: Array<Array<String>>) {
+        sheetName = this
+        this@Workbook[address] = values
+    }
+
+    operator fun set(address: String, format: Format) {
         val targetRange = Range(address)
         requests.add(
             Request().apply {
@@ -98,27 +115,36 @@ class Workbook(val spreadsheetID: String) {
         )
     }
 
-    fun add(startRowIndex: Int, numberOfRows: Int, rows: Boolean) {
+    operator fun String.set(address: String, format: Format) {
+        sheetName = this
+        this@Workbook[address] = format
+    }
+
+    sealed interface Linearity
+    data object ROWS: Linearity
+    data object COLUMNS: Linearity
+
+    operator fun Linearity.plus(intRange: IntRange) {
         requests.add(Request().apply {
             insertDimension = InsertDimensionRequest().apply {
                 range = DimensionRange().apply {
                     sheetId = this@Workbook.sheet.properties.sheetId
-                    dimension = if (rows) "ROWS" else "COLUMNS"
-                    startIndex = startRowIndex
-                    endIndex = startRowIndex + numberOfRows
+                    dimension = if (this == ROWS) "ROWS" else "COLUMNS"
+                    startIndex = intRange.first
+                    endIndex = intRange.last
                 }
                 inheritFromBefore = false
             }
         })
     }
 
-    fun delete(intRange: IntRange, rows: Boolean) {
+    operator fun Line.minus(intRange: IntRange) {
         requests.add(Request().apply {
             deleteDimension = DeleteDimensionRequest().apply {
                 range = DimensionRange().apply {
                     sheetId = this@Workbook.sheet.properties.sheetId
-                    dimension = if (rows) "ROWS" else "COLUMNS"
-                    startIndex = intRange.first - 1
+                    dimension = if (this == ROWS) "ROWS" else "COLUMNS"
+                    startIndex = intRange.first
                     endIndex = intRange.last
                 }
             }
@@ -140,6 +166,11 @@ class Workbook(val spreadsheetID: String) {
         })
     }
 
+    fun String.addCheckbox(address: String) {
+        sheetName = this
+        this@Workbook.addCheckbox(address)
+    }
+
     fun mergeCells(address: String) {
         requests.add(Request().apply {
             mergeCells = MergeCellsRequest().apply {
@@ -147,6 +178,11 @@ class Workbook(val spreadsheetID: String) {
                 mergeType = "MERGE_ALL"
             }
         })
+    }
+
+    fun String.mergeCells(address: String) {
+        sheetName = this
+        this@Workbook.mergeCells(address)
     }
 
     fun resize(intRange: IntRange, rows: Boolean, newWidth: Int? = null) {
