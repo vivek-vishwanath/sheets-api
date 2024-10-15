@@ -1,5 +1,6 @@
 package org.example
 
+import cells.Cell
 import com.google.api.services.sheets.v4.model.*
 import org.example.OAuth.service
 import org.example.cells.Format
@@ -60,15 +61,17 @@ class Workbook(val spreadsheetID: String) {
         return this@Workbook[address]
     }
 
-    operator fun set(address: String, value: String) = set(address, arrayOf(arrayOf(value)))
+    operator fun set(address: String, verticalOffset: Int = 0, horizontalOffset: Int = 0, value: String) =
+        set(address, verticalOffset, horizontalOffset, arrayOf(arrayOf(value)))
 
-    operator fun set(address: String, values: Array<String>) {
-	if (Range(address).height == 1) set(address, arrayOf(values))
-	else set(address, Array(values.size) { arrayOf(values[it]) })
+    operator fun set(address: String, verticalOffset: Int = 0, horizontalOffset: Int = 0, values: Array<String>) {
+        this[address, verticalOffset, horizontalOffset] =
+            if (Range(address).height == 0) arrayOf(values)
+            else Array(values.size) { arrayOf(values[it]) }
     }
 
-    operator fun set(address: String, values: Array<Array<String>>) {
-        val targetRange = Range(address)
+    operator fun set(address: String, verticalOffset: Int = 0, horizontalOffset: Int = 0, values: Array<Array<String>>) {
+        val targetRange = Range(address) + Cell(horizontalOffset, verticalOffset)
         if (values.size > targetRange.height + 1)
             throw MismatchedDimensionsException()
         else if (values.size <= targetRange.height)
@@ -93,13 +96,8 @@ class Workbook(val spreadsheetID: String) {
         )
     }
 
-    operator fun String.set(address: String, values: Array<Array<String>>) {
-        sheetName = this
-        this@Workbook[address] = values
-    }
-
-    operator fun set(address: String, format: Format) {
-        val targetRange = Range(address)
+    operator fun set(address: String, verticalOffset: Int = 0, horizontalOffset: Int = 0, format: Format) {
+        val targetRange = Range(address) + Cell(horizontalOffset, verticalOffset)
         requests.add(
             Request().apply {
                 updateCells = UpdateCellsRequest().apply {
@@ -121,21 +119,24 @@ class Workbook(val spreadsheetID: String) {
         )
     }
 
-    operator fun String.set(address: String, format: Format) {
-        sheetName = this
-        this@Workbook[address] = format
-    }
+    operator fun set(cell: Cell, verticalOffset: Int = 0, horizontalOffset: Int = 0, value: String) = set(cell.toString(), verticalOffset, horizontalOffset, value)
+
+    operator fun set(cell: Cell, verticalOffset: Int = 0, horizontalOffset: Int = 0, values: Array<String>) = set(cell.toString(), verticalOffset, horizontalOffset, values)
+
+    operator fun set(address: Cell, verticalOffset: Int = 0, horizontalOffset: Int = 0, values: Array<Array<String>>) = set(address.toString(), verticalOffset, horizontalOffset, values)
+
+    operator fun set(address: Cell, verticalOffset: Int = 0, horizontalOffset: Int = 0, format: Format) = set(address.toString(), verticalOffset, horizontalOffset, format)
 
     sealed interface Linearity
-    data object ROWS: Linearity
-    data object COLUMNS: Linearity
+    data object ROWS : Linearity
+    data object COLUMNS : Linearity
 
-    operator fun Linearity.plus(intRange: IntRange) {
+    operator fun Linearity.plusAssign(intRange: IntRange) {
         requests.add(Request().apply {
             insertDimension = InsertDimensionRequest().apply {
                 range = DimensionRange().apply {
                     sheetId = this@Workbook.sheet.properties.sheetId
-                    dimension = if (this == ROWS) "ROWS" else "COLUMNS"
+                    dimension = if (this@plusAssign == ROWS) "ROWS" else "COLUMNS"
                     startIndex = intRange.first
                     endIndex = intRange.last
                 }
@@ -144,23 +145,23 @@ class Workbook(val spreadsheetID: String) {
         })
     }
 
-    operator fun Linearity.minus(intRange: IntRange) {
+    operator fun Linearity.minusAssign(intRange: IntRange) {
         requests.add(Request().apply {
-            deleteDimension = DeleteDimensionRequest().apply {
-                range = DimensionRange().apply {
+            deleteDimension = DeleteDimensionRequest().setRange(
+                DimensionRange().apply {
                     sheetId = this@Workbook.sheet.properties.sheetId
-                    dimension = if (this == ROWS) "ROWS" else "COLUMNS"
+                    dimension = if (this@minusAssign == ROWS) "ROWS" else "COLUMNS"
                     startIndex = intRange.first
                     endIndex = intRange.last
                 }
-            }
+            )
         })
     }
 
-    fun addCheckbox(address: String) {
+    fun addCheckbox(address: String, verticalOffset: Int = 0, horizontalOffset: Int = 0) {
         requests.add(Request().apply {
             setDataValidation = SetDataValidationRequest().apply {
-                range = Range(address).gridRange(sheet.properties.sheetId)
+                range = Range(address).plus(Cell(horizontalOffset, verticalOffset)).gridRange(sheet.properties.sheetId)
                 rule = DataValidationRule().apply {
                     condition = BooleanCondition().apply {
                         type = "BOOLEAN"
@@ -172,29 +173,29 @@ class Workbook(val spreadsheetID: String) {
         })
     }
 
-    fun String.addCheckbox(address: String) {
+    fun String.addCheckbox(address: String, verticalOffset: Int = 0, horizontalOffset: Int = 0) {
         sheetName = this
-        this@Workbook.addCheckbox(address)
+        this@Workbook.addCheckbox(address, verticalOffset, horizontalOffset)
     }
 
-    fun mergeCells(address: String) {
+    fun mergeCells(address: String, verticalOffset: Int = 0, horizontalOffset: Int = 0) {
         requests.add(Request().apply {
             mergeCells = MergeCellsRequest().apply {
-                range = Range(address).gridRange(sheet.properties.sheetId)
+                range = Range(address).plus(Cell(horizontalOffset, verticalOffset)).gridRange(sheet.properties.sheetId)
                 mergeType = "MERGE_ALL"
             }
         })
     }
 
-    fun String.mergeCells(address: String) {
+    fun String.mergeCells(address: String, verticalOffset: Int = 0, horizontalOffset: Int = 0) {
         sheetName = this
-        this@Workbook.mergeCells(address)
+        this@Workbook.mergeCells(address, verticalOffset, horizontalOffset)
     }
 
-    fun resize(intRange: IntRange, rows: Boolean, newWidth: Int? = null) {
+    fun Linearity.resize(intRange: IntRange, newWidth: Int? = null) {
         val dimensionRange = DimensionRange().apply {
             sheetId = sheet.properties.sheetId
-            dimension = if (rows) "ROWS" else "COLUMNS"
+            dimension = if (this@resize == ROWS) "ROWS" else "COLUMNS"
             startIndex = intRange.first - 1
             endIndex = intRange.last
         }
@@ -212,11 +213,11 @@ class Workbook(val spreadsheetID: String) {
         })
     }
 
-    fun protectRange(address: String, editors: Array<String>) {
+    fun protectRange(address: String, editors: Array<String>, verticalOffset: Int = 0, horizontalOffset: Int = 0) {
         requests.add(Request().apply {
             addProtectedRange = AddProtectedRangeRequest().apply {
                 protectedRange = ProtectedRange().apply {
-                    this.range = Range(address).gridRange(sheet.properties.sheetId)
+                    this.range = Range(address).plus(Cell(horizontalOffset, verticalOffset)).gridRange(sheet.properties.sheetId)
                     this.description = "Protected range example"
                     this.editors = Editors().setUsers(editors.toList())
                     this.warningOnly = false
