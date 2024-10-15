@@ -28,5 +28,7 @@ class Range(col: Int, row: Int, val width: Int, val height: Int): Cell(col, row)
         endColumnIndex = col + width
     }
 
+    override operator fun plus(cell: Cell) = Range(col + cell.col, row + cell.row, width, height)
+
     override fun toString() = "${super.toString()}:${Cell(col + width, row + height)}"
 }

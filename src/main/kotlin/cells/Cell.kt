@@ -8,6 +8,8 @@ open class Cell(val col: Int, val row: Int) {
 
     constructor(address: String) : this(fromString(address))
 
+    open operator fun plus(cell: Cell) = Cell(col + cell.col, row + cell.row)
+
     companion object {
 
         fun fromString(address: String): Cell {
@@ -19,7 +21,7 @@ open class Cell(val col: Int, val row: Int) {
                 if (i >= address.length) throw InvalidAddressException()
             }
             val row = address.substring(i).toIntOrNull()
-                ?: throw InvalidAddressException("Missing or Invalid Row #")
+                ?: throw InvalidAddressException("Missing or Invalid Row #: ${address.substring(i)} is not an int")
             return Cell(col, row)
         }
     }
