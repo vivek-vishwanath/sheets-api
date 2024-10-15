@@ -21,10 +21,12 @@ data class Format(
     val hyperlink: Boolean = false
 ) {
 
-    data class Color(val r: UByte = 0u, val g: UByte = 0u, val b: UByte = 0u) {
+    data class Color(val r: UByte = 0u, val g: UByte = r, val b: UByte = r) {
 
         companion object {
             val BLACK = Color()
+            val LT_GRAY = Color(225u)
+            val YELLOW = Color(0xFFu, 0xFFu, 0u)
         }
         fun convert() = com.google.api.services.sheets.v4.model.Color().apply {
             red = r.toFloat() / 256
@@ -49,7 +51,7 @@ data class Format(
     class AngledText(val angle: Int = 0): TextRotation
     data object VerticalText: TextRotation
 
-    data class Padding(val top: Int = 0, val right: Int = 0, val bottom: Int = 0, val left: Int = 0) {
+    data class Padding(val all: Int = 0, val top: Int = all, val right: Int = all, val bottom: Int = all, val left: Int = all) {
         fun convert() = com.google.api.services.sheets.v4.model.Padding().apply {
             top = this@Padding.top
             right = this@Padding.right
@@ -63,26 +65,29 @@ data class Format(
     data object Automatic: NumberFormat
     data class NumberPattern(val pattern: String): NumberFormat
 
-    class Edges(val top: Edge = Edge(), val right: Edge = Edge(), val bottom: Edge = Edge(), val left: Edge = Edge()) {
+    class Edges(val all: Edge = Edge(color = Color.LT_GRAY), val top: Edge = all, val right: Edge = all, val bottom: Edge = all, val left: Edge = all) {
         fun convert() = Borders().apply {
             top = this@Edges.top.convert()
             right = this@Edges.right.convert()
             bottom = this@Edges.bottom.convert()
             left = this@Edges.left.convert()
         }
+
+        companion object {
+            val ALL = Edges(Edge())
+        }
     }
 
-    class Edge(val color: Color = Color.BLACK, val style: EdgeStyle = EdgeStyle.NONE) {
+    class Edge(val color: Color = Color.BLACK, val style: EdgeStyle = EdgeStyle.SOLID) {
 
         fun convert() = Border().apply {
             color = this@Edge.color.convert()
             style = this@Edge.style.toString()
-            width = 4
         }
     }
 
     enum class EdgeStyle {
-        NONE, SOLID, DOTTED, DASHED, DOUBLE, GROOVE, RIDGE, INSET, OUTSET,
+        NONE, SOLID, DASHED, DOTTED, SOLID_MEDIUM, SOLID_THICK, DOUBLE
     }
 
     fun convert() = CellFormat().apply {
